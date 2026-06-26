@@ -27,7 +27,6 @@ void Graph::addRoad(const string& city1, const string& city2, int distance) {
     cout << "Road added between " << city1 << " and " << city2 << " (" << distance << " km).\n";
 }
 
-// Directed edge with possibly negative weight (traffic penalty/discount)
 void Graph::addPenaltyRoad(const string& from, const string& to, int weight) {
     if (cityIndex.find(from) == cityIndex.end() || cityIndex.find(to) == cityIndex.end()) {
         cout << "One or both cities not found.\n"; return;
@@ -41,14 +40,18 @@ void Graph::printGraph() {
     cout << "\n--- Graph (Normal Roads) ---\n";
     for (int i = 0; i < numCities; i++) {
         cout << cityNames[i] << " -> ";
-        for (auto& p : adjList[i])
-            cout << cityNames[p.first] << "(" << p.second << "km) ";
+        for (int j = 0; j < (int)adjList[i].size(); j++)
+            cout << cityNames[adjList[i][j].first] << "(" << adjList[i][j].second << "km) ";
         cout << "\n";
     }
     if (!penaltyEdges.empty()) {
         cout << "\n--- Penalty / Traffic Roads (Directed) ---\n";
-        for (auto& [u, v, w] : penaltyEdges)
+        for (int i = 0; i < (int)penaltyEdges.size(); i++) {
+            int u = get<0>(penaltyEdges[i]);
+            int v = get<1>(penaltyEdges[i]);
+            int w = get<2>(penaltyEdges[i]);
             cout << cityNames[u] << " -> " << cityNames[v] << " (" << w << " km)\n";
+        }
     }
 }
 
@@ -61,13 +64,18 @@ void Graph::shortestPath(const string& src, const string& dest) {
     }
     int s = cityIndex[src], d = cityIndex[dest];
     vector<int> dist(numCities, INT_MAX), parent(numCities, -1);
-    priority_queue<pair<int,int>, vector<pair<int,int>>, greater<>> pq;
+    priority_queue<pair<int,int>, vector<pair<int,int>>, greater<pair<int,int>>> pq;
     dist[s] = 0; pq.push({0, s});
     while (!pq.empty()) {
-        auto [cost, u] = pq.top(); pq.pop();
+        int cost = pq.top().first;
+        int u    = pq.top().second;
+        pq.pop();
         if (cost > dist[u]) continue;
-        for (auto& [v, w] : adjList[u])
+        for (int j = 0; j < (int)adjList[u].size(); j++) {
+            int v = adjList[u][j].first;
+            int w = adjList[u][j].second;
             if (dist[u] + w < dist[v]) { dist[v] = dist[u] + w; parent[v] = u; pq.push({dist[v], v}); }
+        }
     }
     if (dist[d] == INT_MAX) { cout << "No path found.\n"; return; }
     vector<string> path;
@@ -91,8 +99,10 @@ void Graph::fewestHops(const string& src, const string& dest) {
     dist[s] = 0; q.push(s);
     while (!q.empty()) {
         int u = q.front(); q.pop();
-        for (auto& [v, w] : adjList[u])
+        for (int j = 0; j < (int)adjList[u].size(); j++) {
+            int v = adjList[u][j].first;
             if (dist[v] == -1) { dist[v] = dist[u] + 1; parent[v] = u; q.push(v); }
+        }
     }
     if (dist[d] == -1) { cout << "No path found.\n"; return; }
     vector<string> path;
@@ -112,30 +122,38 @@ void Graph::shortestPathWithPenalties(const string& src, const string& dest) {
     }
     int s = cityIndex[src], d = cityIndex[dest];
 
-    // Combine normal roads + penalty/directed edges
     vector<tuple<int,int,int>> edges;
     for (int u = 0; u < numCities; u++)
-        for (auto& [v, w] : adjList[u]) {
-            edges.push_back({u, v, w});
-            edges.push_back({v, u, w}); // undirected
+        for (int j = 0; j < (int)adjList[u].size(); j++) {
+            int v = adjList[u][j].first;
+            int w = adjList[u][j].second;
+            edges.push_back(make_tuple(u, v, w));
+            edges.push_back(make_tuple(v, u, w));
         }
-    for (auto& e : penaltyEdges)
-        edges.push_back(e); // directed, possibly negative
+    for (int i = 0; i < (int)penaltyEdges.size(); i++)
+        edges.push_back(penaltyEdges[i]);
 
     vector<int> dist(numCities, INT_MAX), parent(numCities, -1);
     dist[s] = 0;
 
     for (int i = 0; i < numCities - 1; i++)
-        for (auto& [u, v, w] : edges)
+        for (int j = 0; j < (int)edges.size(); j++) {
+            int u = get<0>(edges[j]);
+            int v = get<1>(edges[j]);
+            int w = get<2>(edges[j]);
             if (dist[u] != INT_MAX && dist[u] + w < dist[v]) {
                 dist[v] = dist[u] + w; parent[v] = u;
             }
+        }
 
-    // Negative cycle detection
-    for (auto& [u, v, w] : edges)
+    for (int j = 0; j < (int)edges.size(); j++) {
+        int u = get<0>(edges[j]);
+        int v = get<1>(edges[j]);
+        int w = get<2>(edges[j]);
         if (dist[u] != INT_MAX && dist[u] + w < dist[v]) {
             cout << "WARNING: Negative cycle detected in graph!\n"; return;
         }
+    }
 
     if (dist[d] == INT_MAX) { cout << "No path found.\n"; return; }
 
@@ -156,7 +174,12 @@ void Graph::allPairsShortestPath() {
     vector<vector<int>> dist(numCities, vector<int>(numCities, INF));
     for (int i = 0; i < numCities; i++) dist[i][i] = 0;
     for (int u = 0; u < numCities; u++)
-        for (auto& [v, w] : adjList[u]) { dist[u][v] = min(dist[u][v], w); dist[v][u] = min(dist[v][u], w); }
+        for (int j = 0; j < (int)adjList[u].size(); j++) {
+            int v = adjList[u][j].first;
+            int w = adjList[u][j].second;
+            dist[u][v] = min(dist[u][v], w);
+            dist[v][u] = min(dist[v][u], w);
+        }
     for (int k = 0; k < numCities; k++)
         for (int i = 0; i < numCities; i++)
             for (int j = 0; j < numCities; j++)
