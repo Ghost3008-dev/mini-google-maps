@@ -43,8 +43,8 @@ A console-based C++ application that simulates core map navigation features usin
 
 ```
 mini-google-maps/
-├── graph.h       # Graph class declaration
-├── graph.cpp     # Algorithm implementations
+├── Graph.h       # Graph class declaration
+├── Graph.cpp     # Algorithm implementations
 └── main.cpp      # Menu-driven interface
 ```
 
@@ -52,11 +52,11 @@ mini-google-maps/
 
 ## 🚀 How to Run
 
-**Requirements:** GCC 7+ with C++17 support
+**Requirements:** GCC 6.3+ with C++14 or higher
 
 ```bash
 # Compile
-g++ -std=c++17 -o mini-google-maps.exe main.cpp graph.cpp -I.
+g++ -std=c++17 -o mini-google-maps.exe main.cpp Graph.cpp -I.
 
 # Run
 ./mini-google-maps.exe        # Linux/Mac
